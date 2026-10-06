@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.mahoraga.wheel.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "mahoraga_wheel.refmap.json",
+  "mixins": [],
+  "client": ["LightTextureMixin"],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

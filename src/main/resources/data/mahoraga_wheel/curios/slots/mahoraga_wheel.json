@@ -1,0 +1,6 @@
+{
+  "size": 0,
+  "order": 35,
+  "icon": "mahoraga_wheel:slot/empty_wheel_slot",
+  "validators": ["curios:tag"]
+}

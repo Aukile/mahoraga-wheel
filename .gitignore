@@ -1,0 +1,13 @@
+.gradle/
+build/
+out/
+.idea/
+*.iml
+*.ipr
+*.iws
+run/
+run-server/
+*.log
+
+# Local toolchain; do not commit JDK installations.
+.tools/

@@ -1,0 +1,18 @@
+{
+  "mappings": {
+    "com/mahoraga/wheel/mixin/LightTextureMixin": {
+      "updateLightTexture": "Lnet/minecraft/client/renderer/LightTexture;m_109881_(F)V",
+      "Lnet/minecraft/client/renderer/GameRenderer;getNightVisionScale(Lnet/minecraft/world/entity/LivingEntity;F)F": "Lnet/minecraft/client/renderer/GameRenderer;m_109108_(Lnet/minecraft/world/entity/LivingEntity;F)F",
+      "Lnet/minecraft/client/player/LocalPlayer;hasEffect(Lnet/minecraft/world/effect/MobEffect;)Z": "Lnet/minecraft/client/player/LocalPlayer;m_21023_(Lnet/minecraft/world/effect/MobEffect;)Z"
+    }
+  },
+  "data": {
+    "searge": {
+      "com/mahoraga/wheel/mixin/LightTextureMixin": {
+        "updateLightTexture": "Lnet/minecraft/client/renderer/LightTexture;m_109881_(F)V",
+        "Lnet/minecraft/client/renderer/GameRenderer;getNightVisionScale(Lnet/minecraft/world/entity/LivingEntity;F)F": "Lnet/minecraft/client/renderer/GameRenderer;m_109108_(Lnet/minecraft/world/entity/LivingEntity;F)F",
+        "Lnet/minecraft/client/player/LocalPlayer;hasEffect(Lnet/minecraft/world/effect/MobEffect;)Z": "Lnet/minecraft/client/player/LocalPlayer;m_21023_(Lnet/minecraft/world/effect/MobEffect;)Z"
+      }
+    }
+  }
+}

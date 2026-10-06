@@ -1,0 +1,33 @@
+{
+  "wheel_turn": {
+    "subtitle": "subtitles.mahoraga_wheel.wheel_turn",
+    "sounds": [
+      {
+        "name": "mahoraga_wheel:wheel_turn",
+        "stream": false
+      }
+    ]
+  },
+  "wheel_adapted": {
+    "subtitle": "subtitles.mahoraga_wheel.wheel_adapted",
+    "sounds": [
+      {
+        "name": "block/beacon/power_select",
+        "pitch": 0.7
+      }
+    ]
+  },
+  "wheel_nullify": {
+    "subtitle": "subtitles.mahoraga_wheel.wheel_nullify",
+    "sounds": [
+      {
+        "name": "item/shield/block1",
+        "pitch": 0.6
+      },
+      {
+        "name": "item/shield/block2",
+        "pitch": 0.6
+      }
+    ]
+  }
+}
