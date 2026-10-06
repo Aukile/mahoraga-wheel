@@ -7,8 +7,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.WeakHashMap;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Component.Serializer;
@@ -27,12 +29,11 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.event.entity.living.LivingAttackEvent;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.event.entity.living.LivingEvent.LivingTickEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.tick.EntityTickEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotResult;
 
@@ -48,15 +49,32 @@ public final class AdaptationHandler {
       return findWheelSlot(living).map(AdaptationHandler.WheelSlot::stack).orElse(ItemStack.EMPTY);
    }
 
+   public static boolean isEnhanced(ItemStack stack) {
+      return stack.getItem() instanceof MahoragaWheelItem wheel && wheel.isEnhanced();
+   }
+
    public static Optional<AdaptationHandler.WheelSlot> findWheelSlot(LivingEntity living) {
       ItemStack head = living.getItemBySlot(EquipmentSlot.HEAD);
-      return head.is((Item)ModItems.MAHORAGA_WHEEL.get())
-         ? Optional.of(new AdaptationHandler.WheelSlot(head, () -> living.broadcastBreakEvent(EquipmentSlot.HEAD)))
+      return head.getItem() instanceof MahoragaWheelItem
+         ? Optional.of(new AdaptationHandler.WheelSlot(head, () -> living.onEquippedItemBroken(head.getItem(), EquipmentSlot.HEAD)))
          : findCurioSlot(living).map(r -> new AdaptationHandler.WheelSlot(r.stack(), () -> CuriosApi.broadcastCurioBreakEvent(r.slotContext())));
    }
 
    private static Optional<SlotResult> findCurioSlot(LivingEntity living) {
-      return CuriosApi.getCuriosInventory(living).resolve().flatMap(inv -> inv.findFirstCurio((Item)ModItems.MAHORAGA_WHEEL.get()));
+      var invOpt = CuriosApi.getCuriosInventory(living);
+      if (invOpt.isEmpty()) {
+         return Optional.empty();
+      } else {
+         var inv = invOpt.get();
+         for (Item wheel : new Item[]{(Item)ModItems.MAHORAGA_WHEEL.get(), (Item)ModItems.MAHORAGA_WHEEL_WEAKENED.get()}) {
+            Optional<SlotResult> r = inv.findFirstCurio(wheel);
+            if (r.isPresent()) {
+               return r;
+            }
+         }
+
+         return Optional.empty();
+      }
    }
 
    public static boolean hasWheelInCurios(LivingEntity living) {
@@ -89,11 +107,20 @@ public final class AdaptationHandler {
             if (!wheel.isDamageableItem()) {
                return false;
             } else {
-               ServerPlayer sp = living instanceof ServerPlayer p ? p : null;
-               boolean broke = wheel.hurt(amount, living.getRandom(), sp);
-               if (broke) {
+               if (!(living.level() instanceof ServerLevel serverLevel)) {
+                  return false;
+               }
+
+               boolean[] broke = new boolean[1];
+               wheel.hurtAndBreak(amount, serverLevel, living, item -> {
+                  broke[0] = true;
                   slot.get().onBreak().run();
-                  wheel.shrink(1);
+               });
+               if (broke[0]) {
+                  if (!wheel.isEmpty()) {
+                     wheel.shrink(1);
+                  }
+
                   wheel.setDamageValue(0);
                   hud(
                      living,
@@ -104,7 +131,7 @@ public final class AdaptationHandler {
                   );
                }
 
-               return broke;
+               return broke[0];
             }
          }
       } else {
@@ -121,12 +148,12 @@ public final class AdaptationHandler {
    }
 
    public static String identityOf(Entity entity) {
-      ResourceLocation typeId = ForgeRegistries.ENTITY_TYPES.getKey(entity.getType());
+      ResourceLocation typeId = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
       return "T|" + typeId;
    }
 
    private static String nameJsonOf(Entity entity) {
-      return Serializer.toJson(entity.getType().getDescription());
+      return Serializer.toJson(entity.getType().getDescription(), RegistryAccess.EMPTY);
    }
 
    public static AdaptationHandler.AdaptKey keyFor(DamageSource source, LivingEntity victim) {
@@ -179,7 +206,9 @@ public final class AdaptationHandler {
    }
 
    public static float masteryMultiplier(ItemStack wheel) {
-      double bonus = Math.min((Double)WheelConfig.MASTERY_MAX.get(), (Double)WheelConfig.MASTERY_PER_ADAPT.get() * AdaptationData.getMastery(wheel));
+      double raw = (Double)WheelConfig.MASTERY_PER_ADAPT.get() * AdaptationData.getMastery(wheel);
+      boolean uncapped = isEnhanced(wheel) && (Boolean)WheelConfig.ENHANCED_UNCAPPED_MASTERY.get();
+      double bonus = uncapped ? raw : Math.min((Double)WheelConfig.MASTERY_MAX.get(), raw);
       return (float)(1.0 + bonus);
    }
 
@@ -212,7 +241,7 @@ public final class AdaptationHandler {
    }
 
    @SubscribeEvent(priority = EventPriority.HIGH)
-   public static void onAttack(LivingAttackEvent event) {
+   public static void onIncomingDamage(LivingIncomingDamageEvent event) {
       LivingEntity living = event.getEntity();
       if (!living.level().isClientSide) {
          DamageSource source = event.getSource();
@@ -232,7 +261,7 @@ public final class AdaptationHandler {
    }
 
    @SubscribeEvent(priority = EventPriority.LOW)
-   public static void onHurt(LivingHurtEvent event) {
+   public static void onDamagePre(LivingDamageEvent.Pre event) {
       LivingEntity living = event.getEntity();
       if (!living.level().isClientSide) {
          DamageSource source = event.getSource();
@@ -242,13 +271,13 @@ public final class AdaptationHandler {
                AdaptationData.purgeLegacy(wheel);
                AdaptationHandler.AdaptKey key = keyFor(source, living);
                float before = AdaptationData.getPercent(wheel, key.id());
-               float rawAmount = event.getAmount();
+               float rawAmount = event.getNewDamage();
                float reduction = effectiveReduction(wheel, key.id(), before);
                if (reduction >= 1.0F && immuneActive(wheel, key.id())) {
-                  event.setCanceled(true);
+                  event.setNewDamage(0.0F);
                } else {
                   float finalAmount = rawAmount * (1.0F - reduction);
-                  event.setAmount(finalAmount);
+                  event.setNewDamage(finalAmount);
                   if (before < 100.0F) {
                      double factor = damageFactor(rawAmount);
                      float gain = key.entity()
@@ -301,7 +330,7 @@ public final class AdaptationHandler {
    }
 
    @SubscribeEvent(priority = EventPriority.NORMAL)
-   public static void onDealDamage(LivingHurtEvent event) {
+   public static void onDealDamage(LivingDamageEvent.Pre event) {
       LivingEntity target = event.getEntity();
       if (!target.level().isClientSide) {
          if (event.getSource().getEntity() instanceof LivingEntity attacker && attacker != target) {
@@ -315,7 +344,7 @@ public final class AdaptationHandler {
                }
 
                if (bonus > 0.0F) {
-                  event.setAmount(event.getAmount() * (1.0F + bonus));
+                  event.setNewDamage(event.getNewDamage() * (1.0F + bonus));
                }
             }
          }
@@ -323,9 +352,8 @@ public final class AdaptationHandler {
    }
 
    @SubscribeEvent
-   public static void onLivingTick(LivingTickEvent event) {
-      LivingEntity living = event.getEntity();
-      if (!living.level().isClientSide && !PENDING_HEAL.isEmpty()) {
+   public static void onEntityTick(EntityTickEvent.Post event) {
+      if (event.getEntity() instanceof LivingEntity living && !living.level().isClientSide && !PENDING_HEAL.isEmpty()) {
          Float heal = PENDING_HEAL.remove(living);
          if (heal != null && heal > 0.0F && living.isAlive()) {
             living.heal(heal);
@@ -496,7 +524,7 @@ public final class AdaptationHandler {
       Component name = null;
       if (nameJson != null) {
          try {
-            name = Serializer.fromJson(nameJson);
+            name = Serializer.fromJson(nameJson, RegistryAccess.EMPTY);
          } catch (Exception var3) {
          }
       }
@@ -521,13 +549,28 @@ public final class AdaptationHandler {
          case DEBUFF -> effectName(e.damageType());
          case DARK -> Component.translatable("mahoraga_wheel.adapt.dark");
          case RUN -> Component.translatable("mahoraga_wheel.adapt.run");
+         case SWIM -> Component.translatable("mahoraga_wheel.adapt.swim");
+         case LAVA -> Component.translatable("mahoraga_wheel.adapt.lava");
+         case GLIDE -> Component.translatable("mahoraga_wheel.adapt.glide");
+         case FLY -> Component.translatable("mahoraga_wheel.adapt.fly");
+         case JUMP -> Component.translatable("mahoraga_wheel.adapt.jump");
+         case LEAP -> Component.translatable("mahoraga_wheel.adapt.leap");
+         case BREATH -> Component.translatable("mahoraga_wheel.adapt.breath");
+         case MINE -> Component.translatable("mahoraga_wheel.adapt.mine");
+         case SATIETY -> Component.translatable("mahoraga_wheel.adapt.satiety");
+         case KNOCKBACK -> Component.translatable("mahoraga_wheel.adapt.knockback");
+         case LAVASIGHT -> Component.translatable("mahoraga_wheel.adapt.lavasight");
+         case CLIMB -> Component.translatable("mahoraga_wheel.adapt.climb");
+         case REGEN -> Component.translatable("mahoraga_wheel.adapt.regen");
+         case WISDOM -> Component.translatable("mahoraga_wheel.adapt.wisdom");
+         case STEP -> Component.translatable("mahoraga_wheel.adapt.step");
          default -> describe(e.entity(), e.damageType(), e.nameJson());
       });
    }
 
    public static Component effectName(String effectId) {
       ResourceLocation id = ResourceLocation.tryParse(effectId);
-      MobEffect effect = id == null ? null : (MobEffect)ForgeRegistries.MOB_EFFECTS.getValue(id);
+      MobEffect effect = id == null ? null : BuiltInRegistries.MOB_EFFECT.getOptional(id).orElse(null);
       return (Component)(effect == null ? Component.literal(effectId) : effect.getDisplayName());
    }
 

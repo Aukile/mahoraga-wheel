@@ -1,26 +1,26 @@
-/* Recovered with Vineflower 1.11.2; Minecraft names restored to official 1.20.1 mappings. */
 package com.mahoraga.wheel.network;
 
-import com.mahoraga.wheel.client.AdaptationHud;
-import java.util.function.Supplier;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent.Context;
+import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
-public record HudMessagePacket(String key, Component text) {
-   public static void encode(HudMessagePacket msg, FriendlyByteBuf buf) {
-      buf.writeUtf(msg.key);
-      buf.writeComponent(msg.text);
-   }
+public record HudMessagePacket(String key, Component text) implements CustomPacketPayload {
+   public static final CustomPacketPayload.Type<HudMessagePacket> TYPE = new CustomPacketPayload.Type<>(
+      ResourceLocation.fromNamespaceAndPath("mahoraga_wheel", "hud")
+   );
+   public static final StreamCodec<RegistryFriendlyByteBuf, HudMessagePacket> STREAM_CODEC = StreamCodec.of(
+      (buf, msg) -> {
+         buf.writeUtf(msg.key);
+         ComponentSerialization.STREAM_CODEC.encode(buf, msg.text);
+      },
+      buf -> new HudMessagePacket(buf.readUtf(), ComponentSerialization.STREAM_CODEC.decode(buf))
+   );
 
-   public static HudMessagePacket decode(FriendlyByteBuf buf) {
-      return new HudMessagePacket(buf.readUtf(), buf.readComponent());
-   }
-
-   public static void handle(HudMessagePacket msg, Supplier<Context> ctx) {
-      ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> AdaptationHud.push(msg.key(), msg.text())));
-      ctx.get().setPacketHandled(true);
+   @Override
+   public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
+      return TYPE;
    }
 }

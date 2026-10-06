@@ -1,41 +1,43 @@
-/* Recovered with Vineflower 1.11.2; Minecraft names restored to official 1.20.1 mappings. */
 package com.mahoraga.wheel.network;
 
-import java.util.Optional;
+import com.mahoraga.wheel.client.ClientPayloadHandler;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkDirection;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.network.simple.SimpleChannel;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public final class ModNetwork {
-   private static final String VERSION = "2";
-   public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-      new ResourceLocation("mahoraga_wheel", "main"), () -> "2", "2"::equals, "2"::equals
-   );
-
    private ModNetwork() {
    }
 
-   public static void register() {
-      CHANNEL.registerMessage(
-         0, HudMessagePacket.class, HudMessagePacket::encode, HudMessagePacket::decode, HudMessagePacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT)
-      );
-      CHANNEL.registerMessage(
-         1, SettingPacket.class, SettingPacket::encode, SettingPacket::decode, SettingPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER)
-      );
-      CHANNEL.registerMessage(
-         2, ActionPacket.class, ActionPacket::encode, ActionPacket::decode, ActionPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER)
+   public static void register(RegisterPayloadHandlersEvent event) {
+      PayloadRegistrar registrar = event.registrar("2");
+      registrar.playToServer(SettingPacket.TYPE, SettingPacket.STREAM_CODEC, SettingPacket::handle);
+      registrar.playToServer(ActionPacket.TYPE, ActionPacket.STREAM_CODEC, ActionPacket::handle);
+      // Clientbound type+codec must be registered on both sides (so the server can
+      // send it); only the handler body is client-only, guarded by a dist check.
+      // The ClientPayloadHandler reference lives in a lambda that never executes on
+      // a dedicated server, so the client class is never loaded there.
+      registrar.playToClient(
+         HudMessagePacket.TYPE,
+         HudMessagePacket.STREAM_CODEC,
+         (msg, ctx) -> {
+            if (FMLEnvironment.dist == Dist.CLIENT) {
+               ClientPayloadHandler.handleHud(msg, ctx);
+            }
+         }
       );
    }
 
-   public static void sendToServer(Object msg) {
-      CHANNEL.sendToServer(msg);
+   public static void sendToServer(CustomPacketPayload msg) {
+      PacketDistributor.sendToServer(msg);
    }
 
    public static void sendHud(ServerPlayer player, String key, Component text) {
-      CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new HudMessagePacket(key, text));
+      PacketDistributor.sendToPlayer(player, new HudMessagePacket(key, text));
    }
 }

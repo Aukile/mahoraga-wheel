@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.sounds.SoundEvent;
@@ -25,9 +26,9 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.Item.Properties;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.neoforged.api.distmarker.Dist;
+
+import net.neoforged.fml.loading.FMLEnvironment;
 import org.jetbrains.annotations.Nullable;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotContext;
@@ -43,11 +44,15 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
       super(properties);
    }
 
+   public boolean isEnhanced() {
+      return true;
+   }
+
    public EquipmentSlot getEquipmentSlot() {
       return EquipmentSlot.HEAD;
    }
 
-   public SoundEvent getEquipSound() {
+   public Holder<SoundEvent> getEquipSound() {
       return SoundEvents.ARMOR_EQUIP_NETHERITE;
    }
 
@@ -55,22 +60,26 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
       return armorType != EquipmentSlot.HEAD ? false : !(entity instanceof LivingEntity living && AdaptationHandler.hasWheelInCurios(living));
    }
 
+   public boolean canEquip(ItemStack stack, EquipmentSlot armorType, LivingEntity entity) {
+      return canEquip(stack, armorType, (Entity)entity);
+   }
+
    public boolean canEquipFromUse(SlotContext slotContext, ItemStack stack) {
       return false;
    }
 
    public SoundInfo getEquipSound(SlotContext slotContext, ItemStack stack) {
-      return new SoundInfo(SoundEvents.ARMOR_EQUIP_NETHERITE, 1.0F, 0.8F);
+      return new SoundInfo(SoundEvents.ARMOR_EQUIP_NETHERITE.value(), 1.0F, 0.8F);
    }
 
    public boolean canEquip(SlotContext slotContext, ItemStack stack) {
-      return !slotContext.entity().getItemBySlot(EquipmentSlot.HEAD).is(this);
+      return !(slotContext.entity().getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof MahoragaWheelItem);
    }
 
    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
       ItemStack stack = player.getItemInHand(hand);
       if (level.isClientSide) {
-         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> WheelScreen.open(WheelSource.of(hand)));
+         WheelScreen.open(WheelSource.of(hand));
       }
 
       return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
@@ -80,7 +89,7 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
       ItemStack stack = player.getItemInHand(hand);
       if (!stack.is(this)) {
          return false;
-      } else if (AdaptationHandler.hasWheelInCurios(player) || player.getItemBySlot(EquipmentSlot.HEAD).is(this)) {
+      } else if (AdaptationHandler.hasWheelInCurios(player) || player.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof MahoragaWheelItem) {
          return false;
       } else {
          return this.tryEquipToCurio(player, stack) ? true : this.swapWithEquipmentSlot(this, player.level(), player, hand).getResult().consumesAction();
@@ -100,10 +109,10 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
    }
 
    private boolean tryEquipToCurio(Player player, ItemStack stack) {
-      if (player.getItemBySlot(EquipmentSlot.HEAD).is(this)) {
+      if (player.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof MahoragaWheelItem) {
          return false;
       } else {
-         Optional<ICurioStacksHandler> handler = CuriosApi.getCuriosInventory(player).resolve().flatMap(inv -> inv.getStacksHandler("mahoraga_wheel"));
+         Optional<ICurioStacksHandler> handler = CuriosApi.getCuriosInventory(player).flatMap(inv -> inv.getStacksHandler("mahoraga_wheel"));
          if (handler.isEmpty()) {
             return false;
          } else {
@@ -132,7 +141,7 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
       return false;
    }
 
-   public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+   public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
       tooltip.add(Component.translatable("tooltip.mahoraga_wheel.lore").withStyle(new ChatFormatting[]{ChatFormatting.DARK_PURPLE, ChatFormatting.ITALIC}));
       tooltip.add(Component.translatable("tooltip.mahoraga_wheel.desc").withStyle(ChatFormatting.GRAY));
       tooltip.add(
@@ -157,6 +166,21 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
                case DEBUFF -> ChatFormatting.GREEN;
                case DARK -> ChatFormatting.AQUA;
                case RUN -> ChatFormatting.YELLOW;
+               case SWIM -> ChatFormatting.BLUE;
+               case LAVA -> ChatFormatting.GOLD;
+               case GLIDE -> ChatFormatting.WHITE;
+               case FLY -> ChatFormatting.DARK_PURPLE;
+               case JUMP -> ChatFormatting.DARK_GREEN;
+               case LEAP -> ChatFormatting.YELLOW;
+               case BREATH -> ChatFormatting.DARK_AQUA;
+               case MINE -> ChatFormatting.GRAY;
+               case SATIETY -> ChatFormatting.GOLD;
+               case KNOCKBACK -> ChatFormatting.WHITE;
+               case LAVASIGHT -> ChatFormatting.RED;
+               case CLIMB -> ChatFormatting.GREEN;
+               case REGEN -> ChatFormatting.LIGHT_PURPLE;
+               case WISDOM -> ChatFormatting.YELLOW;
+               case STEP -> ChatFormatting.WHITE;
                default -> done ? ChatFormatting.RED : ChatFormatting.WHITE;
             };
             boolean special = e.existence() || e.kind().convenience();
@@ -164,7 +188,7 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
                .append(AdaptationHandler.bar(e.percent(), special ? color : null))
                .append(Component.literal(" "))
                .append(AdaptationHandler.describe(e).copy().withStyle(color));
-            if (e.kind() == AdaptationData.Kind.RUN) {
+            if (e.kind().levelBased()) {
                line.append(Component.literal(" Lv." + e.level()).withStyle(ChatFormatting.YELLOW));
             } else if (done) {
                line.append(Component.literal(" ✔").withStyle(color));

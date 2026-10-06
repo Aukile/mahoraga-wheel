@@ -7,11 +7,10 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.client.settings.KeyConflictContext;
-import net.minecraftforge.event.TickEvent.ClientTickEvent;
-import net.minecraftforge.event.TickEvent.Phase;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.neoforge.client.settings.KeyConflictContext;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 public final class WheelKeys {
    public static final KeyMapping OPEN = new KeyMapping("key.mahoraga_wheel.open", KeyConflictContext.IN_GAME, Type.KEYSYM, 71, "key.categories.mahoraga_wheel");
@@ -24,8 +23,8 @@ public final class WheelKeys {
    }
 
    @SubscribeEvent
-   public static void onClientTick(ClientTickEvent event) {
-      if (event.phase == Phase.END) {
+   public static void onClientTick(ClientTickEvent.Post event) {
+      {
          Minecraft mc = Minecraft.getInstance();
 
          while (OPEN.consumeClick()) {

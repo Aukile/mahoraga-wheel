@@ -1,59 +1,43 @@
 plugins {
     id 'java'
     id 'idea'
-    id 'net.minecraftforge.gradle' version '6.0.54'
+    id 'net.neoforged.moddev' version '2.0.148'
 }
 
 group = 'com.mahoraga.wheel'
-version = '1.7.2-recovered'
-base { archivesName = 'mahoraga_wheel-1.20.1' }
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+version = '1.8.0'
+base { archivesName = 'mahoraga_wheel-1.21.1' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
-minecraft {
-    mappings channel: 'official', version: '1.20.1'
-    copyIdeResources = true
+neoForge {
+    version = '21.1.256'
+
     runs {
-        configureEach {
-            // Keep the original production/SRG refmap and remap it to official
-            // names only in development; do not globally disable other refmaps.
-            property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', layout.buildDirectory.file('createSrgToMcp/output.srg').get().asFile.absolutePath
-            mods { mahoraga_wheel { source sourceSets.main } }
+        client {
+            client()
         }
-        client { workingDirectory project.file('run') }
         server {
-            workingDirectory project.file('run-server')
-            args '--nogui'
+            server()
+            programArgument '--nogui'
         }
     }
 }
 
 repositories {
-    maven {
-        name = 'MojangLibraries'
-        url = 'https://libraries.minecraft.net/'
-        content { includeGroup 'com.mojang' }
-    }
     mavenCentral()
     maven {
         name = 'Curios'
         url = 'https://maven.theillusivec4.top/'
-        // Do not probe the Curios server for every Minecraft/Forge dependency.
+        // Do not probe the Curios server for every Minecraft/NeoForge dependency.
         content { includeGroup 'top.theillusivec4.curios' }
     }
 }
 
 dependencies {
-    minecraft 'net.minecraftforge:forge:1.20.1-47.4.0'
-    implementation fg.deobf('top.theillusivec4.curios:curios-forge:5.14.1+1.20.1')
+    implementation 'top.theillusivec4.curios:curios-neoforge:9.5.1+1.21.1'
 }
 
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
-
-jar {
-    manifest { attributes 'MixinConfigs': 'mahoraga_wheel.mixins.json' }
-    finalizedBy 'reobfJar'
-}
 
 // Local JDKs are tools, not project sources.
 idea { module { excludeDirs += file('.tools') } }

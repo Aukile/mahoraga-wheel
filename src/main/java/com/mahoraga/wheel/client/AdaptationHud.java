@@ -7,14 +7,14 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import net.minecraft.Util;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.LayeredDraw;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.client.gui.overlay.ForgeGui;
-import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 
-public final class AdaptationHud implements IGuiOverlay {
+public final class AdaptationHud implements LayeredDraw.Layer {
    public static final AdaptationHud INSTANCE = new AdaptationHud();
    private static final List<AdaptationHud.Line> LINES = new ArrayList<>();
 
@@ -32,8 +32,11 @@ public final class AdaptationHud implements IGuiOverlay {
       }
    }
 
-   public void render(ForgeGui gui, GuiGraphics g, float partialTick, int screenWidth, int screenHeight) {
+   @Override
+   public void render(GuiGraphics g, DeltaTracker deltaTracker) {
       Minecraft mc = Minecraft.getInstance();
+      int screenWidth = g.guiWidth();
+      int screenHeight = g.guiHeight();
       if (!LINES.isEmpty() && !mc.options.hideGui && mc.player != null) {
          if ((Boolean)WheelConfig.HUD_ENABLED.get()) {
             long now = Util.getMillis();

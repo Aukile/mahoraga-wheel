@@ -1,35 +1,33 @@
-/* Recovered with Vineflower 1.11.2; Minecraft names restored to official 1.20.1 mappings. */
 package com.mahoraga.wheel;
 
-import com.google.gson.JsonObject;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.common.crafting.conditions.ICondition;
-import net.minecraftforge.common.crafting.conditions.IConditionSerializer;
-import net.minecraftforge.common.crafting.conditions.ICondition.IContext;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.neoforged.neoforge.common.conditions.ICondition;
+import net.neoforged.neoforge.common.conditions.ICondition.IContext;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
-public class CurioSlotCondition implements ICondition {
-   public static final ResourceLocation ID = new ResourceLocation("mahoraga_wheel", "curio_slot_enabled");
+/**
+ * Data condition backing {@code data/mahoraga_wheel_default/curios/slots/mahoraga_wheel.json}:
+ * the bonus starting curio slot only loads when the config allows it.
+ */
+public record CurioSlotCondition() implements ICondition {
+   public static final MapCodec<CurioSlotCondition> CODEC = RecordCodecBuilder.mapCodec(inst -> inst.stable(new CurioSlotCondition()));
+   public static final DeferredRegister<MapCodec<? extends ICondition>> CONDITIONS = DeferredRegister.create(
+      NeoForgeRegistries.CONDITION_SERIALIZERS.key(), MahoragaWheelMod.MODID
+   );
 
-   public ResourceLocation getID() {
-      return ID;
+   static {
+      CONDITIONS.register("curio_slot_enabled", () -> CODEC);
    }
 
+   @Override
    public boolean test(IContext context) {
       return WheelConfig.curioSlotEnabled();
    }
 
-   public static final class Serializer implements IConditionSerializer<CurioSlotCondition> {
-      public static final CurioSlotCondition.Serializer INSTANCE = new CurioSlotCondition.Serializer();
-
-      public void write(JsonObject json, CurioSlotCondition value) {
-      }
-
-      public CurioSlotCondition read(JsonObject json) {
-         return new CurioSlotCondition();
-      }
-
-      public ResourceLocation getID() {
-         return CurioSlotCondition.ID;
-      }
+   @Override
+   public MapCodec<? extends ICondition> codec() {
+      return CODEC;
    }
 }

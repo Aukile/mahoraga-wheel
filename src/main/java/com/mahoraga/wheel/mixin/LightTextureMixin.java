@@ -1,10 +1,10 @@
-/* Recovered with Vineflower 1.11.2; Minecraft names restored to official 1.20.1 mappings. */
 package com.mahoraga.wheel.mixin;
 
 import com.mahoraga.wheel.ConvenienceHandler;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.core.Holder;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
@@ -17,9 +17,9 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 public abstract class LightTextureMixin {
    @Redirect(
       method = "updateLightTexture",
-      at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;hasEffect(Lnet/minecraft/world/effect/MobEffect;)Z")
+      at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;hasEffect(Lnet/minecraft/core/Holder;)Z")
    )
-   private boolean mahoraga_wheel$hasEffect(LocalPlayer player, MobEffect effect) {
+   private boolean mahoraga_wheel$hasEffect(LocalPlayer player, Holder<MobEffect> effect) {
       boolean real = player.hasEffect(effect);
       return !real && effect == MobEffects.NIGHT_VISION ? ConvenienceHandler.darkVisionStrength(player) > 0.0F : real;
    }

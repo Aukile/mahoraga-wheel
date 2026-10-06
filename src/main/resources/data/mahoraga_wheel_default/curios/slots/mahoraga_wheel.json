@@ -2,5 +2,8 @@
   "conditions": [
     { "type": "mahoraga_wheel:curio_slot_enabled" }
   ],
+  "neoforge:conditions": [
+    { "type": "mahoraga_wheel:curio_slot_enabled" }
+  ],
   "size": 1
 }

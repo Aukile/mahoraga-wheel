@@ -3,7 +3,6 @@ package com.mahoraga.wheel;
 
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 public enum WheelSource {
@@ -17,7 +16,7 @@ public enum WheelSource {
          case OFF_HAND -> player.getOffhandItem();
          case WORN -> AdaptationHandler.findWheel(player);
       };
-      return stack.is((Item)ModItems.MAHORAGA_WHEEL.get()) ? stack : ItemStack.EMPTY;
+      return stack.getItem() instanceof MahoragaWheelItem ? stack : ItemStack.EMPTY;
    }
 
    public InteractionHand hand() {
