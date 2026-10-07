@@ -35,12 +35,14 @@ public class MahoragaWheelMod {
       MinecraftForge.EVENT_BUS.register(AdaptationHandler.class);
       MinecraftForge.EVENT_BUS.register(ConvenienceHandler.class);
       ModNetwork.register();
+      modBus.addListener(CurioValidators::onCommonSetup);
       DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientSetup.init(modBus));
    }
 
    private void addCreative(BuildCreativeModeTabContentsEvent event) {
       if (event.getTabKey() == CreativeModeTabs.COMBAT || event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
          event.accept(ModItems.MAHORAGA_WHEEL);
+         event.accept(ModItems.MAHORAGA_WHEEL_WEAKENED);
       }
    }
 }

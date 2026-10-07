@@ -48,15 +48,32 @@ public final class AdaptationHandler {
       return findWheelSlot(living).map(AdaptationHandler.WheelSlot::stack).orElse(ItemStack.EMPTY);
    }
 
+   public static boolean isEnhanced(ItemStack stack) {
+      return stack.getItem() instanceof MahoragaWheelItem wheel && wheel.isEnhanced();
+   }
+
    public static Optional<AdaptationHandler.WheelSlot> findWheelSlot(LivingEntity living) {
       ItemStack head = living.getItemBySlot(EquipmentSlot.HEAD);
-      return head.is((Item)ModItems.MAHORAGA_WHEEL.get())
+      return head.getItem() instanceof MahoragaWheelItem
          ? Optional.of(new AdaptationHandler.WheelSlot(head, () -> living.broadcastBreakEvent(EquipmentSlot.HEAD)))
          : findCurioSlot(living).map(r -> new AdaptationHandler.WheelSlot(r.stack(), () -> CuriosApi.broadcastCurioBreakEvent(r.slotContext())));
    }
 
    private static Optional<SlotResult> findCurioSlot(LivingEntity living) {
-      return CuriosApi.getCuriosInventory(living).resolve().flatMap(inv -> inv.findFirstCurio((Item)ModItems.MAHORAGA_WHEEL.get()));
+      var invOpt = CuriosApi.getCuriosInventory(living).resolve();
+      if (invOpt.isEmpty()) {
+         return Optional.empty();
+      } else {
+         var inv = invOpt.get();
+         for (Item wheel : new Item[]{(Item)ModItems.MAHORAGA_WHEEL.get(), (Item)ModItems.MAHORAGA_WHEEL_WEAKENED.get()}) {
+            Optional<SlotResult> r = inv.findFirstCurio(wheel);
+            if (r.isPresent()) {
+               return r;
+            }
+         }
+
+         return Optional.empty();
+      }
    }
 
    public static boolean hasWheelInCurios(LivingEntity living) {
@@ -179,7 +196,9 @@ public final class AdaptationHandler {
    }
 
    public static float masteryMultiplier(ItemStack wheel) {
-      double bonus = Math.min((Double)WheelConfig.MASTERY_MAX.get(), (Double)WheelConfig.MASTERY_PER_ADAPT.get() * AdaptationData.getMastery(wheel));
+      double raw = (Double)WheelConfig.MASTERY_PER_ADAPT.get() * AdaptationData.getMastery(wheel);
+      boolean uncapped = isEnhanced(wheel) && (Boolean)WheelConfig.ENHANCED_UNCAPPED_MASTERY.get();
+      double bonus = uncapped ? raw : Math.min((Double)WheelConfig.MASTERY_MAX.get(), raw);
       return (float)(1.0 + bonus);
    }
 
@@ -300,6 +319,16 @@ public final class AdaptationHandler {
       return Mth.clamp(percent / 100.0F, 0.0F, 1.0F) * WheelConfig.existenceBonus();
    }
 
+   public static float existenceBonus(ItemStack wheel, float percent) {
+      float ratio = percent / 100.0F;
+      if (isEnhanced(wheel) && (Boolean)WheelConfig.ENHANCED_UNCAPPED_MASTERY.get()) {
+         ratio = Math.max(0.0F, ratio);
+      } else {
+         ratio = Mth.clamp(ratio, 0.0F, 1.0F);
+      }
+      return ratio * WheelConfig.existenceBonus();
+   }
+
    @SubscribeEvent(priority = EventPriority.NORMAL)
    public static void onDealDamage(LivingHurtEvent event) {
       LivingEntity target = event.getEntity();
@@ -308,7 +337,7 @@ public final class AdaptationHandler {
             ItemStack wheel = findWheel(attacker);
             if (!wheel.isEmpty()) {
                String xid = "X|" + identityOf(target);
-               float bonus = existenceBonus(AdaptationData.getPercent(wheel, xid));
+               float bonus = existenceBonus(wheel, AdaptationData.getPercent(wheel, xid));
                AdaptationData.Entry xe = AdaptationData.entry(wheel, xid);
                if (xe != null && !Float.isNaN(xe.user())) {
                   bonus = Math.min(bonus, xe.user());
@@ -353,7 +382,7 @@ public final class AdaptationHandler {
                      );
                      if (!(gain <= 0.0F)) {
                         float after = AdaptationData.addPercent(wheel, xid, gain, time, "", key.nameJson(), true, true, (Integer)WheelConfig.MAX_ENTRIES.get());
-                        AdaptationData.setLimits(wheel, xid, existenceBonus(after), WheelConfig.existenceBonus());
+                        AdaptationData.setLimits(wheel, xid, existenceBonus(wheel, after), WheelConfig.existenceBonus());
                         boolean completed = after >= 100.0F;
                         if (!completed || !damageWheel(living, (Integer)WheelConfig.DURABILITY_PER_ADAPT.get())) {
                            if (completed) {
@@ -372,7 +401,7 @@ public final class AdaptationHandler {
                                     .append(
                                        Component.literal("  ")
                                           .append(
-                                             Component.translatable("message.mahoraga_wheel.bonus", new Object[]{Math.round(existenceBonus(after) * 100.0F)})
+                                             Component.translatable("message.mahoraga_wheel.bonus", new Object[]{Math.round(existenceBonus(wheel, after) * 100.0F)})
                                           )
                                           .withStyle(ChatFormatting.LIGHT_PURPLE)
                                     )
@@ -521,6 +550,21 @@ public final class AdaptationHandler {
          case DEBUFF -> effectName(e.damageType());
          case DARK -> Component.translatable("mahoraga_wheel.adapt.dark");
          case RUN -> Component.translatable("mahoraga_wheel.adapt.run");
+         case SWIM -> Component.translatable("mahoraga_wheel.adapt.swim");
+         case LAVA -> Component.translatable("mahoraga_wheel.adapt.lava");
+         case GLIDE -> Component.translatable("mahoraga_wheel.adapt.glide");
+         case FLY -> Component.translatable("mahoraga_wheel.adapt.fly");
+         case JUMP -> Component.translatable("mahoraga_wheel.adapt.jump");
+         case LEAP -> Component.translatable("mahoraga_wheel.adapt.leap");
+         case BREATH -> Component.translatable("mahoraga_wheel.adapt.breath");
+         case MINE -> Component.translatable("mahoraga_wheel.adapt.mine");
+         case SATIETY -> Component.translatable("mahoraga_wheel.adapt.satiety");
+         case KNOCKBACK -> Component.translatable("mahoraga_wheel.adapt.knockback");
+         case LAVASIGHT -> Component.translatable("mahoraga_wheel.adapt.lavasight");
+         case CLIMB -> Component.translatable("mahoraga_wheel.adapt.climb");
+         case REGEN -> Component.translatable("mahoraga_wheel.adapt.regen");
+         case WISDOM -> Component.translatable("mahoraga_wheel.adapt.wisdom");
+         case STEP -> Component.translatable("mahoraga_wheel.adapt.step");
          default -> describe(e.entity(), e.damageType(), e.nameJson());
       });
    }

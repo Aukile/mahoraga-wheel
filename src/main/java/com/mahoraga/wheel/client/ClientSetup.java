@@ -29,7 +29,10 @@ public final class ClientSetup {
    }
 
    private static void onClientSetup(FMLClientSetupEvent event) {
-      event.enqueueWork(() -> CuriosRendererRegistry.register((Item)ModItems.MAHORAGA_WHEEL.get(), WheelCurioRenderer::new));
+      event.enqueueWork(() -> {
+         CuriosRendererRegistry.register((Item)ModItems.MAHORAGA_WHEEL.get(), WheelCurioRenderer::new);
+         CuriosRendererRegistry.register((Item)ModItems.MAHORAGA_WHEEL_WEAKENED.get(), WheelCurioRenderer::new);
+      });
    }
 
    private static void onRegisterOverlays(RegisterGuiOverlaysEvent event) {

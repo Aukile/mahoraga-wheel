@@ -43,6 +43,10 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
       super(properties);
    }
 
+   public boolean isEnhanced() {
+      return true;
+   }
+
    public EquipmentSlot getEquipmentSlot() {
       return EquipmentSlot.HEAD;
    }
@@ -55,6 +59,10 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
       return armorType != EquipmentSlot.HEAD ? false : !(entity instanceof LivingEntity living && AdaptationHandler.hasWheelInCurios(living));
    }
 
+   public boolean canEquip(ItemStack stack, EquipmentSlot armorType, LivingEntity entity) {
+      return canEquip(stack, armorType, (Entity)entity);
+   }
+
    public boolean canEquipFromUse(SlotContext slotContext, ItemStack stack) {
       return false;
    }
@@ -64,7 +72,7 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
    }
 
    public boolean canEquip(SlotContext slotContext, ItemStack stack) {
-      return !slotContext.entity().getItemBySlot(EquipmentSlot.HEAD).is(this);
+      return !(slotContext.entity().getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof MahoragaWheelItem);
    }
 
    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
@@ -80,7 +88,7 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
       ItemStack stack = player.getItemInHand(hand);
       if (!stack.is(this)) {
          return false;
-      } else if (AdaptationHandler.hasWheelInCurios(player) || player.getItemBySlot(EquipmentSlot.HEAD).is(this)) {
+      } else if (AdaptationHandler.hasWheelInCurios(player) || player.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof MahoragaWheelItem) {
          return false;
       } else {
          return this.tryEquipToCurio(player, stack) ? true : this.swapWithEquipmentSlot(this, player.level(), player, hand).getResult().consumesAction();
@@ -100,7 +108,7 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
    }
 
    private boolean tryEquipToCurio(Player player, ItemStack stack) {
-      if (player.getItemBySlot(EquipmentSlot.HEAD).is(this)) {
+      if (player.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof MahoragaWheelItem) {
          return false;
       } else {
          Optional<ICurioStacksHandler> handler = CuriosApi.getCuriosInventory(player).resolve().flatMap(inv -> inv.getStacksHandler("mahoraga_wheel"));
@@ -135,6 +143,7 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
       tooltip.add(Component.translatable("tooltip.mahoraga_wheel.lore").withStyle(new ChatFormatting[]{ChatFormatting.DARK_PURPLE, ChatFormatting.ITALIC}));
       tooltip.add(Component.translatable("tooltip.mahoraga_wheel.desc").withStyle(ChatFormatting.GRAY));
+      tooltip.add(Component.translatable("tooltip.mahoraga_wheel.exclusive").withStyle(ChatFormatting.GRAY));
       tooltip.add(
          Component.translatable("tooltip.mahoraga_wheel.summary", new Object[]{AdaptationData.getTurns(stack), AdaptationData.getMastery(stack)})
             .withStyle(ChatFormatting.GOLD)
@@ -157,6 +166,21 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
                case DEBUFF -> ChatFormatting.GREEN;
                case DARK -> ChatFormatting.AQUA;
                case RUN -> ChatFormatting.YELLOW;
+               case SWIM -> ChatFormatting.BLUE;
+               case LAVA -> ChatFormatting.GOLD;
+               case GLIDE -> ChatFormatting.WHITE;
+               case FLY -> ChatFormatting.DARK_PURPLE;
+               case JUMP -> ChatFormatting.DARK_GREEN;
+               case LEAP -> ChatFormatting.YELLOW;
+               case BREATH -> ChatFormatting.DARK_AQUA;
+               case MINE -> ChatFormatting.GRAY;
+               case SATIETY -> ChatFormatting.GOLD;
+               case KNOCKBACK -> ChatFormatting.WHITE;
+               case LAVASIGHT -> ChatFormatting.RED;
+               case CLIMB -> ChatFormatting.GREEN;
+               case REGEN -> ChatFormatting.LIGHT_PURPLE;
+               case WISDOM -> ChatFormatting.YELLOW;
+               case STEP -> ChatFormatting.WHITE;
                default -> done ? ChatFormatting.RED : ChatFormatting.WHITE;
             };
             boolean special = e.existence() || e.kind().convenience();
@@ -164,7 +188,7 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
                .append(AdaptationHandler.bar(e.percent(), special ? color : null))
                .append(Component.literal(" "))
                .append(AdaptationHandler.describe(e).copy().withStyle(color));
-            if (e.kind() == AdaptationData.Kind.RUN) {
+            if (e.kind().levelBased()) {
                line.append(Component.literal(" Lv." + e.level()).withStyle(ChatFormatting.YELLOW));
             } else if (done) {
                line.append(Component.literal(" ✔").withStyle(color));

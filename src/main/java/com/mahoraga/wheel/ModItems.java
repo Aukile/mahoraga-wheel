@@ -13,4 +13,7 @@ public class ModItems {
    public static final RegistryObject<Item> MAHORAGA_WHEEL = ITEMS.register(
       "mahoraga_wheel", () -> new MahoragaWheelItem(new Properties().durability(100).rarity(Rarity.EPIC).fireResistant())
    );
+   public static final RegistryObject<Item> MAHORAGA_WHEEL_WEAKENED = ITEMS.register(
+      "mahoraga_wheel_weakened", () -> new WeakenedMahoragaWheelItem(new Properties().durability(100).rarity(Rarity.RARE).fireResistant())
+   );
 }

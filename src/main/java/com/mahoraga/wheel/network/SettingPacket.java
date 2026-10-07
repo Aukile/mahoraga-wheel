@@ -61,6 +61,21 @@ public record SettingPacket(WheelSource source, String key, byte mode, float val
          case EXISTENCE -> AdaptationHandler.existenceBonus(e.percent());
          case DARK -> e.percent() / 100.0F * ((Double)WheelConfig.DARK_MAX_STRENGTH.get()).floatValue();
          case RUN -> (float)(e.level() * WheelConfig.RUN_SPEED_PER_LEVEL.get());
+         case SWIM -> (float)(e.level() * WheelConfig.SWIM_SPEED_PER_LEVEL.get());
+         case LAVA -> (float)(e.level() * WheelConfig.LAVA_SPEED_PER_LEVEL.get());
+         case GLIDE -> e.percent() / 100.0F * ((Double)WheelConfig.GLIDE_MAX_STRENGTH.get()).floatValue();
+         case FLY -> e.percent() / 100.0F;
+         case JUMP -> (float)(e.level() * WheelConfig.JUMP_HEIGHT_PER_LEVEL.get());
+         case LEAP -> (float)(e.level() * WheelConfig.LEAP_SPEED_PER_LEVEL.get());
+         case BREATH -> e.percent() / 100.0F;
+         case MINE -> (float)(e.level() * WheelConfig.MINE_SPEED_PER_LEVEL.get());
+         case SATIETY -> e.percent() / 100.0F;
+         case KNOCKBACK -> e.percent() / 100.0F;
+         case LAVASIGHT -> e.percent() / 100.0F;
+         case CLIMB -> e.percent() / 100.0F;
+         case REGEN -> e.percent() / 100.0F * ((Double)WheelConfig.REGEN_RATE.get()).floatValue();
+         case WISDOM -> (float)(e.level() * WheelConfig.WISDOM_XP_PER_LEVEL.get());
+         case STEP -> e.percent() / 100.0F;
       };
    }
 
@@ -68,7 +83,10 @@ public record SettingPacket(WheelSource source, String key, byte mode, float val
       return switch (e.kind()) {
          case EXISTENCE -> WheelConfig.existenceBonus();
          case DARK -> ((Double)WheelConfig.DARK_MAX_STRENGTH.get()).floatValue();
-         case RUN -> Math.max(max, 1.0E-4F);
+         case RUN, SWIM, LAVA, JUMP, LEAP, MINE, WISDOM -> Math.max(max, 1.0E-4F);
+         case GLIDE -> ((Double)WheelConfig.GLIDE_MAX_STRENGTH.get()).floatValue();
+         case REGEN -> ((Double)WheelConfig.REGEN_RATE.get()).floatValue();
+         case FLY, BREATH, SATIETY, KNOCKBACK, LAVASIGHT, CLIMB, STEP -> 1.0F;
          default -> 1.0F;
       };
    }

@@ -5,7 +5,10 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "mahoraga_wheel.refmap.json",
   "mixins": [],
-  "client": ["LightTextureMixin"],
+  "client": [
+    "LightTextureMixin",
+    "FogRendererMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

@@ -132,6 +132,21 @@ public class WheelScreen extends Screen {
             case EXISTENCE -> AdaptationHandler.existenceBonus(e.percent());
             case DARK -> e.percent() / 100.0F;
             case RUN -> e.level() * 0.01F;
+            case SWIM -> e.level() * 0.03F;
+            case LAVA -> e.level() * 0.05F;
+            case GLIDE -> e.percent() / 100.0F;
+            case FLY -> e.percent() / 100.0F;
+            case JUMP -> e.level() * 0.08F;
+            case LEAP -> e.level() * 0.02F;
+            case BREATH -> e.percent() / 100.0F;
+            case MINE -> e.level() * 0.05F;
+            case SATIETY -> e.percent() / 100.0F;
+            case KNOCKBACK -> e.percent() / 100.0F;
+            case LAVASIGHT -> e.percent() / 100.0F;
+            case CLIMB -> e.percent() / 100.0F;
+            case REGEN -> e.percent() / 100.0F;
+            case WISDOM -> e.level() * 0.05F;
+            case STEP -> e.percent() / 100.0F;
          };
       }
    }
@@ -142,7 +157,7 @@ public class WheelScreen extends Screen {
       } else {
          return switch (e.kind()) {
             case EXISTENCE -> WheelConfig.existenceBonus();
-            case RUN -> Math.max(maxOf(e), 1.0E-4F);
+            case RUN, SWIM, LAVA, JUMP, LEAP, MINE, WISDOM -> Math.max(maxOf(e), 1.0E-4F);
             default -> 1.0F;
          };
       }
@@ -346,7 +361,7 @@ public class WheelScreen extends Screen {
       int v = hover ? 158 : (done ? 188 : 128);
       wb(g, rx, ry, 0, v, 226, 30, 256, 320);
       String name = AdaptationHandler.describe(e).getString();
-      if (e.kind() == AdaptationData.Kind.RUN) {
+      if (e.kind().levelBased()) {
          name = name + "  Lv." + e.level();
       }
 
@@ -373,6 +388,48 @@ public class WheelScreen extends Screen {
                break;
             case DARK:
                var10000 = 20;
+               break;
+            case SWIM:
+               var10000 = 20;
+               break;
+            case LAVA:
+               var10000 = 25;
+               break;
+            case GLIDE:
+               var10000 = 15;
+               break;
+            case FLY:
+               var10000 = 15;
+               break;
+            case JUMP:
+               var10000 = 25;
+               break;
+            case BREATH:
+               var10000 = 20;
+               break;
+            case MINE:
+               var10000 = 5;
+               break;
+            case SATIETY:
+               var10000 = 25;
+               break;
+            case KNOCKBACK:
+               var10000 = 5;
+               break;
+            case LAVASIGHT:
+               var10000 = 20;
+               break;
+            case CLIMB:
+               var10000 = 25;
+               break;
+            case REGEN:
+               var10000 = 15;
+               break;
+            case WISDOM:
+               var10000 = 15;
+               break;
+            case STEP:
+               var10000 = 15;
                break;
             default:
                var10000 = 5;
@@ -420,6 +477,20 @@ public class WheelScreen extends Screen {
             case DEBUFF -> 108;
             case EXISTENCE -> 94;
             case DARK -> 101;
+            case SWIM -> 101;
+            case LAVA -> 94;
+            case GLIDE -> 94;
+            case FLY -> 108;
+            case JUMP -> 108;
+            case BREATH -> 101;
+            case MINE -> 87;
+            case SATIETY -> 108;
+            case KNOCKBACK -> 87;
+            case LAVASIGHT -> 101;
+            case CLIMB -> 108;
+            case REGEN -> 94;
+            case WISDOM -> 94;
+            case STEP -> 94;
             default -> 87;
          };
          if (lockedImmune) {
@@ -448,7 +519,7 @@ public class WheelScreen extends Screen {
          valueText = Component.translatable(e.kind().reduction() ? "gui.mahoraga_wheel.locked_80" : "gui.mahoraga_wheel.locked");
          valueColor = -10595216;
       } else {
-         String fmt = e.kind() != AdaptationData.Kind.EXISTENCE && e.kind() != AdaptationData.Kind.RUN ? "" : "+";
+         String fmt = e.kind() != AdaptationData.Kind.EXISTENCE && !e.kind().levelBased() ? "" : "+";
          int cur = Math.round(value * 100.0F);
          int top = Math.round(max * 100.0F);
          valueText = Component.literal(!this.isAuto(e) && cur < top ? fmt + cur + "/" + top + "%" : fmt + cur + "%");
@@ -475,6 +546,21 @@ public class WheelScreen extends Screen {
          case EXISTENCE -> -3695617;
          case DARK -> -9447184;
          case RUN -> -10138;
+         case SWIM -> -16744193;
+         case LAVA -> -1647616;
+         case GLIDE -> -1;
+         case FLY -> -7667451;
+         case JUMP -> -10318735;
+         case LEAP -> -10138;
+         case BREATH -> -16744193;
+         case MINE -> -10551295;
+         case SATIETY -> -39322;
+         case KNOCKBACK -> -1186059;
+         case LAVASIGHT -> -1647616;
+         case CLIMB -> -10318735;
+         case REGEN -> -3780833;
+         case WISDOM -> -1175168;
+         case STEP -> -1;
          default -> e.complete() ? -33941 : -1186059;
       };
    }
