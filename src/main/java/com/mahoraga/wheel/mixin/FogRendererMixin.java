@@ -22,7 +22,7 @@ public abstract class FogRendererMixin {
       method = "setupFog",
       at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;hasEffect(Lnet/minecraft/core/Holder;)Z")
    )
-   private boolean mahoraga_wheel$lavasight(LivingEntity entity, Holder<MobEffect> effect) {
+   private static boolean mahoraga_wheel$lavasight(LivingEntity entity, Holder<MobEffect> effect) {
       boolean real = entity.hasEffect(effect);
       if (!real && effect == MobEffects.FIRE_RESISTANCE && entity instanceof Player player) {
          return ConvenienceHandler.lavaSightStrength(player) >= 0.99F;

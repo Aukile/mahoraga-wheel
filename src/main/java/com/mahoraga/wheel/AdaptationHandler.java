@@ -329,6 +329,16 @@ public final class AdaptationHandler {
       return Mth.clamp(percent / 100.0F, 0.0F, 1.0F) * WheelConfig.existenceBonus();
    }
 
+   public static float existenceBonus(ItemStack wheel, float percent) {
+      float ratio = percent / 100.0F;
+      if (isEnhanced(wheel) && (Boolean)WheelConfig.ENHANCED_UNCAPPED_MASTERY.get()) {
+         ratio = Math.max(0.0F, ratio);
+      } else {
+         ratio = Mth.clamp(ratio, 0.0F, 1.0F);
+      }
+      return ratio * WheelConfig.existenceBonus();
+   }
+
    @SubscribeEvent(priority = EventPriority.NORMAL)
    public static void onDealDamage(LivingDamageEvent.Pre event) {
       LivingEntity target = event.getEntity();
@@ -337,7 +347,7 @@ public final class AdaptationHandler {
             ItemStack wheel = findWheel(attacker);
             if (!wheel.isEmpty()) {
                String xid = "X|" + identityOf(target);
-               float bonus = existenceBonus(AdaptationData.getPercent(wheel, xid));
+               float bonus = existenceBonus(wheel, AdaptationData.getPercent(wheel, xid));
                AdaptationData.Entry xe = AdaptationData.entry(wheel, xid);
                if (xe != null && !Float.isNaN(xe.user())) {
                   bonus = Math.min(bonus, xe.user());
@@ -381,7 +391,7 @@ public final class AdaptationHandler {
                      );
                      if (!(gain <= 0.0F)) {
                         float after = AdaptationData.addPercent(wheel, xid, gain, time, "", key.nameJson(), true, true, (Integer)WheelConfig.MAX_ENTRIES.get());
-                        AdaptationData.setLimits(wheel, xid, existenceBonus(after), WheelConfig.existenceBonus());
+                        AdaptationData.setLimits(wheel, xid, existenceBonus(wheel, after), WheelConfig.existenceBonus());
                         boolean completed = after >= 100.0F;
                         if (!completed || !damageWheel(living, (Integer)WheelConfig.DURABILITY_PER_ADAPT.get())) {
                            if (completed) {
@@ -400,7 +410,7 @@ public final class AdaptationHandler {
                                     .append(
                                        Component.literal("  ")
                                           .append(
-                                             Component.translatable("message.mahoraga_wheel.bonus", new Object[]{Math.round(existenceBonus(after) * 100.0F)})
+                                             Component.translatable("message.mahoraga_wheel.bonus", new Object[]{Math.round(existenceBonus(wheel, after) * 100.0F)})
                                           )
                                           .withStyle(ChatFormatting.LIGHT_PURPLE)
                                     )

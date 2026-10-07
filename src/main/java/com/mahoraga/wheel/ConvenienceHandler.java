@@ -26,6 +26,8 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -86,6 +88,7 @@ public final class ConvenienceHandler {
          updateStepModifier(player, wheel);
          tickLavaSwim(player, wheel);
          tickGlideMove(player, wheel);
+         syncPoses(player);
          tickClimbMove(player, wheel);
          if (!client) {
             trackRun(player, wheel);
@@ -592,47 +595,195 @@ public final class ConvenienceHandler {
       setSpeedModifier(player, LEAP_SPEED_ID, active ? entryEffective(wheel, AdaptationData.KEY_LEAP) : 0.0F);
    }
 
-   static void tickLavaSwim(Player player, ItemStack wheel) {
+         static void tickLavaSwim(Player player, ItemStack wheel) {
       if (wheel.isEmpty() || !AdaptationHandler.isEnhanced(wheel) || !(Boolean)WheelConfig.ENABLE_LAVA.get()) {
+         LAVA_DASH.remove(player);
          return;
       } else if (!player.isInLava() || player.isPassenger() || player.getAbilities().flying || !lavaUnlocked(wheel)) {
+         if (player.isPassenger() || player.getAbilities().flying || !lavaUnlocked(wheel)
+            || !recentlyInLava(player, player.level().getGameTime(), 8L)) {
+            LAVA_DASH.remove(player);
+         }
          return;
       } else {
-         float strength = entryEffective(wheel, AdaptationData.KEY_LAVA);
-         if (!(strength > 0.0F)) {
-            return;
-         } else {
-            player.fallDistance = 0.0F;
-            Vec3 m = player.getDeltaMovement();
-            double targetY = player.isCrouching() ? -0.18 : 0.12;
-            player.setDeltaMovement(m.x, m.y + (targetY - m.y) * 0.35, m.z);
-            player.hasImpulse = true;
+         // Vanilla lava travel already applied yaw-based swim input (0.02) plus 0.5 drag.
+         // Convert the drag to water's 0.8 (ratio 1.6, 1.8 sprinting) so lava swims like
+         // water; adaptation levels scale above that pace.
+         float swim = Mth.clamp(entryEffective(wheel, AdaptationData.KEY_LAVA), 0.0F, 1.0F);
+         LAST_LAVA.put(player, player.level().getGameTime());
+         player.fallDistance = 0.0F;
+         Vec3 m = player.getDeltaMovement();
+         if (player.zza < 0.2F && player.level().getGameTime()
+               - LAST_DASH_RX.getOrDefault(player, -100L) > 10L) {
+            LAVA_DASH.remove(player);
+         }
+         double mult = ((player.isSprinting() || LAVA_DASH.contains(player)) ? 1.8 : 1.6) * (1.0 + swim);
+         double nx = m.x * mult;
+         double nz = m.z * mult;
+         double ns = Math.sqrt(nx * nx + nz * nz);
+         if (ns > 0.6 && ns > 1.0E-4) {
+            nx *= 0.6 / ns;
+            nz *= 0.6 / ns;
+         }
+         double targetY = player.isCrouching() ? -0.18 : 0.04;
+         double ny = m.y + (targetY - m.y) * 0.35;
+         player.setDeltaMovement(nx, ny, nz);
+         player.hasImpulse = true;
+         if (shouldLavaSwimPose(player)) {
+            player.setSwimming(true);
          }
       }
    }
 
-   static void tickGlideMove(Player player, ItemStack wheel) {
+      private static final java.util.Set<Player> GLIDE_LATCH =
+      java.util.Collections.newSetFromMap(new WeakHashMap<>());
+
+   /** Space-mid-air latch request (both sides). Returns true if latched. */
+      private static boolean wearingUsableElytra(Player player) {
+      ItemStack chest = player.getItemBySlot(EquipmentSlot.CHEST);
+      return !chest.isEmpty() && chest.canElytraFly(player);
+   }
+
+   public static boolean shouldLavaSwimPose(Player player) {
+      if (!(player.isSprinting() || LAVA_DASH.contains(player)) || !recentlyInLava(player, player.level().getGameTime(), 8L) || player.isFallFlying() || player.isPassenger()
+         || player.getAbilities().flying || player.isSpectator()) {
+         return false;
+      }
+      ItemStack wheel = AdaptationHandler.findWheel(player);
+      return !wheel.isEmpty() && AdaptationHandler.isEnhanced(wheel)
+         && (Boolean) WheelConfig.ENABLE_LAVA.get() && lavaUnlocked(wheel);
+   }
+
+   private static final java.util.Set<Player> LAVA_DASH =
+      java.util.Collections.newSetFromMap(new WeakHashMap<>());
+   private static final java.util.Map<Player, Long> LAST_DASH_RX = new WeakHashMap<>();
+
+   /** Double-W dash in lava (both sides). Returns true if dashed. */
+   public static void noteDashRx(Player player) {
+      LAST_DASH_RX.put(player, player.level().getGameTime());
+   }
+
+   public static boolean setLavaDash(Player player) {
+      ItemStack wheel = AdaptationHandler.findWheel(player);
+      if (wheel.isEmpty()
+         || !AdaptationHandler.isEnhanced(wheel)
+         || !(Boolean)WheelConfig.ENABLE_LAVA.get()
+         || (!player.isInLava() && !recentlyInLava(player, player.level().getGameTime(), 8L))
+         || player.isPassenger()
+         || player.getAbilities().flying
+         || wearingUsableElytra(player)
+         || player.isSpectator()
+         || !lavaUnlocked(wheel)) {
+      return false;
+      }
+      LAVA_DASH.add(player);
+      return true;
+   }
+
+      private static final java.util.Map<Player, Long> LAST_LAVA = new WeakHashMap<>();
+
+   private static boolean recentlyInLava(Player player, long now, long window) {
+      Long last = LAST_LAVA.get(player);
+      return last != null && now - last < window;
+   }
+
+public static boolean isLavaDashed(Player player) {
+      return LAVA_DASH.contains(player);
+   }
+
+   public static boolean shouldGlidePose(Player player) {
+      if (player.onGround() || player.isInWater() || player.isInLava() || player.isPassenger()
+         || player.getAbilities().flying || player.isSpectator() || wearingUsableElytra(player)) {
+         return false;
+      }
+      if (!GLIDE_LATCH.contains(player) && !glidingActive(player)) {
+         return false;
+      }
+      ItemStack wheel = AdaptationHandler.findWheel(player);
+      return !wheel.isEmpty() && AdaptationHandler.isEnhanced(wheel)
+         && (Boolean) WheelConfig.ENABLE_GLIDE.get()
+         && Mth.clamp(entryEffective(wheel, AdaptationData.KEY_GLIDE), 0.0F, 1.0F) > 0.0F;
+   }
+
+   static void syncPoses(Player player) {
+      if (wearingUsableElytra(player) && player.isFallFlying()) {
+         return;
+      }
+      if (shouldGlidePose(player)) {
+         player.startFallFlying();
+         player.setPose(Pose.FALL_FLYING);
+      } else if (shouldLavaSwimPose(player)) {
+         player.setSwimming(true);
+         player.setPose(Pose.SWIMMING);
+      } else {
+         if (!wearingUsableElytra(player)) {
+            player.stopFallFlying();
+         }
+         if (!player.isInWater()) {
+            player.setSwimming(false);
+         }
+         Pose pose = player.getPose();
+         if (pose == Pose.FALL_FLYING && !wearingUsableElytra(player)) {
+            player.setPose(Pose.STANDING);
+         } else if (pose == Pose.SWIMMING && !player.isInWater()) {
+            player.setPose(Pose.STANDING);
+         }
+      }
+   }
+
+public static boolean glidingActive(Player player) {
+      Long last = LAST_GLIDE.get(player);
+      return last != null && player.level().getGameTime() - last < 6L;
+   }
+
+   public static boolean isGlideLatched(Player player) {
+      return GLIDE_LATCH.contains(player);
+   }
+
+   public static boolean setGlideLatch(Player player) {
+      ItemStack wheel = AdaptationHandler.findWheel(player);
+      if (wheel.isEmpty()
+         || !AdaptationHandler.isEnhanced(wheel)
+         || !(Boolean)WheelConfig.ENABLE_GLIDE.get()
+                  || player.isPassenger()
+         || player.getAbilities().flying
+         || player.isInWater()
+         || player.isInLava()
+         || wearingUsableElytra(player)
+         || player.isSpectator()
+         || !(Mth.clamp(entryEffective(wheel, AdaptationData.KEY_GLIDE), 0.0F, 1.0F) > 0.0F)) {
+      return false;
+      }
+      GLIDE_LATCH.add(player);
+      return true;
+   }
+
+static void tickGlideMove(Player player, ItemStack wheel) {
       if (wheel.isEmpty() || !AdaptationHandler.isEnhanced(wheel) || !(Boolean)WheelConfig.ENABLE_GLIDE.get()) {
+         GLIDE_LATCH.remove(player);
          return;
       } else if (player.onGround()
          || player.isPassenger()
          || player.getAbilities().flying
          || player.isInWater()
          || player.isInLava()
-         || player.isFallFlying()
+         || wearingUsableElytra(player)
          || player.isSpectator()) {
+         GLIDE_LATCH.remove(player);
          return;
       } else {
          long now = player.level().getGameTime();
          Vec3 m = player.getDeltaMovement();
+         boolean latched = GLIDE_LATCH.contains(player);
          boolean falling = m.y < -0.08 && player.fallDistance >= 2.5F;
-         if (!falling && !glidingRecently(player, now, 5L)) {
+         if (!latched && !falling && !glidingRecently(player, now, 5L)) {
             return;
-         } else if ((Boolean)WheelConfig.GLIDE_REQUIRE_SNEAK.get() && !player.isCrouching()) {
+         } else if (!latched && (Boolean)WheelConfig.GLIDE_REQUIRE_SNEAK.get() && !player.isCrouching()) {
             return;
          } else {
             float strength = Mth.clamp(entryEffective(wheel, AdaptationData.KEY_GLIDE), 0.0F, 1.0F);
             if (!(strength > 0.0F)) {
+               GLIDE_LATCH.remove(player);
                return;
             } else {
                Vec3 look = player.getLookAngle();
@@ -657,6 +808,7 @@ public final class ConvenienceHandler {
                player.hasImpulse = true;
                player.fallDistance = 0.0F;
                LAST_GLIDE.put(player, now);
+               player.startFallFlying();
             }
          }
       }

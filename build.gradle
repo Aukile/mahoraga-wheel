@@ -21,6 +21,14 @@ neoForge {
             programArgument '--nogui'
         }
     }
+
+    mods {
+        // Tells the game which sources belong to which mod; without this
+        // the main mod is silently missing from runClient/runServer.
+        'mahoraga_wheel' {
+            sourceSet(sourceSets.main)
+        }
+    }
 }
 
 repositories {

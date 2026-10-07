@@ -1,9 +1,16 @@
 {
   "conditions": [
-    { "type": "mahoraga_wheel:curio_slot_enabled" }
+    {
+      "type": "mahoraga_wheel:curio_slot_enabled"
+    }
   ],
   "neoforge:conditions": [
-    { "type": "mahoraga_wheel:curio_slot_enabled" }
+    {
+      "type": "mahoraga_wheel:curio_slot_enabled"
+    }
   ],
-  "size": 1
+  "size": 1,
+  "validators": [
+    "mahoraga_wheel:wheel_item"
+  ]
 }

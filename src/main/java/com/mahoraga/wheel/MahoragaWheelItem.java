@@ -144,6 +144,7 @@ public class MahoragaWheelItem extends Item implements ICurioItem, Equipable {
    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
       tooltip.add(Component.translatable("tooltip.mahoraga_wheel.lore").withStyle(new ChatFormatting[]{ChatFormatting.DARK_PURPLE, ChatFormatting.ITALIC}));
       tooltip.add(Component.translatable("tooltip.mahoraga_wheel.desc").withStyle(ChatFormatting.GRAY));
+      tooltip.add(Component.translatable("tooltip.mahoraga_wheel.exclusive").withStyle(ChatFormatting.GRAY));
       tooltip.add(
          Component.translatable("tooltip.mahoraga_wheel.summary", new Object[]{AdaptationData.getTurns(stack), AdaptationData.getMastery(stack)})
             .withStyle(ChatFormatting.GOLD)

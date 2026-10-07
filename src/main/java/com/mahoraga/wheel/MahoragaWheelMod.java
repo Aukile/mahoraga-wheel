@@ -22,11 +22,14 @@ public class MahoragaWheelMod {
       ModDataComponents.TYPES.register(modBus);
       CurioSlotCondition.CONDITIONS.register(modBus);
       modBus.addListener(this::addCreative);
-      modBus.addListener(ModNetwork::register);
+      
+        modBus.addListener(ModNetwork::register);
+        modBus.addListener(CurioValidators::onCommonSetup);
       modContainer.registerConfig(ModConfig.Type.COMMON, WheelConfig.SPEC);
       modContainer.registerConfig(ModConfig.Type.CLIENT, WheelConfig.CLIENT_SPEC);
       NeoForge.EVENT_BUS.register(AdaptationHandler.class);
       NeoForge.EVENT_BUS.register(ConvenienceHandler.class);
+      NeoForge.EVENT_BUS.register(DebugCurioCommand.class); // TEMP-DEBUG
       if (FMLEnvironment.dist == Dist.CLIENT) {
          ClientSetup.init(modBus);
       }

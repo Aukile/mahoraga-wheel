@@ -19,6 +19,8 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 public record ActionPacket(WheelSource source, byte action) implements CustomPacketPayload {
    public static final byte EQUIP = 0;
    public static final byte RESET = 1;
+   public static final byte GLIDE = 2;
+   public static final byte DASH = 3;
    public static final CustomPacketPayload.Type<ActionPacket> TYPE = new CustomPacketPayload.Type<>(
       ResourceLocation.fromNamespaceAndPath("mahoraga_wheel", "action")
    );
@@ -41,6 +43,10 @@ public record ActionPacket(WheelSource source, byte action) implements CustomPac
          if (!wheel.isEmpty()) {
             if (msg.action == 0 && msg.source != WheelSource.WORN && wheel.getItem() instanceof MahoragaWheelItem item) {
                item.equipFromHand(player, msg.source.hand());
+            } else if (msg.action == 2) {
+               com.mahoraga.wheel.ConvenienceHandler.setGlideLatch(player);
+            } else if (msg.action == 3) {
+               com.mahoraga.wheel.ConvenienceHandler.noteDashRx(player); com.mahoraga.wheel.ConvenienceHandler.setLavaDash(player);
             } else if (msg.action == 1) {
                AdaptationData.reset(wheel);
                player.level()
